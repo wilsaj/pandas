@@ -338,7 +338,13 @@ class LinePlot(MPLPlot):
             if self.style:
                 style = self.style
 
-            plotf(ax, x, y, style, label=label, **self.kwds)
+            lines = plotf(ax, x, y, style, label=label, **self.kwds)
+            if np.any(np.isnan(y)):
+                isolated_points_mask = _get_isolated_points_mask(y)
+                color = lines[0].get_color()
+                plotf(ax, x[isolated_points_mask], y[isolated_points_mask],
+                      '.', label=label, color=color, **self.kwds)
+
             ax.grid(self.grid)
 
     def _post_plot_logic(self):
@@ -824,6 +830,18 @@ def hist_series(self, ax=None, grid=True, xlabelsize=None, xrot=None,
         plt.setp(ax.get_yticklabels(), rotation=yrot)
 
     return ax
+
+
+def _get_isolated_points_mask(y):
+    """returns a boolean ndarray where each element is True if the
+    element has has NaNs on both neighboring sides, False otherwise
+    """
+    nan_mask = np.isnan(y)
+    flip_mask = nan_mask[:-1] ^ nan_mask[1:]
+    nanwich_mask = ~nan_mask
+    nanwich_mask[:-1] = nanwich_mask[:-1] & flip_mask
+    nanwich_mask[1:] = nanwich_mask[1:] & flip_mask
+    return nanwich_mask
 
 
 def _grouped_plot(plotf, data, column=None, by=None, numeric_only=True,
